@@ -39,6 +39,32 @@
         </div>
       </div>
     </article>
+    <article class="panel" id="panel-quota">
+      <div class="panel-head"><h2>券额度与发货</h2><span class="hint" id="quota-hint">--</span></div>
+      <div class="tools quota-tools">
+        <label>活动 <select id="quota-campaign"><option value="">新建活动</option></select></label>
+        <input id="quota-name" placeholder="活动名称" value="双十一">
+        <input id="quota-amount" type="number" min="0" step="1" placeholder="额度（分）" value="100000">
+        <button id="quota-create" type="button">创建活动</button>
+      </div>
+      <div class="quota-form">
+        <input id="q-id" placeholder="订单号">
+        <input id="q-time" placeholder="接单时间 2026-11-01 09:00:00">
+        <input id="q-qty" type="number" min="1" step="1" placeholder="数量" value="1">
+        <input id="q-sell" type="number" min="0" step="1" placeholder="售价（分）" value="1000">
+        <input id="q-cost" type="number" min="0" step="1" placeholder="单件成本（分）" value="300">
+        <input id="q-fund" type="number" min="0" step="1" placeholder="供应商出资（分）" value="0">
+        <input id="q-coupon" type="number" min="0" step="1" placeholder="券（分）" value="600">
+        <button id="q-submit" type="button">提交订单</button>
+      </div>
+      <div class="ledger" id="quota-usage"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>订单</th><th>接单时间</th><th>券</th><th>用券毛利</th><th>状态</th><th>说明</th><th>能否发货</th><th>操作</th></tr></thead>
+          <tbody id="quota-orders"></tbody>
+        </table>
+      </div>
+    </article>
   </section>
 </main>
 {% endblock %}

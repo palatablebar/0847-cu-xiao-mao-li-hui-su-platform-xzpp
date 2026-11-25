@@ -1,5 +1,5 @@
 (function () {
-  var state = { payload: null, kind: 'bars', run: null, approved: false };
+  var state = { payload: null, kind: 'bars', run: null, approved: false, campaign: null };
   var $ = function (id) { return document.getElementById(id); };
   function esc(value) {
     return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (ch) {
@@ -119,6 +119,78 @@
       if (state.approved) $('download').href = '/api/runs/' + run.run_id + '/evidence';
     } catch (error) { setNotice(error.message); }
   }
+  var LABELS = {DRAFT: '已占额度', ISSUED: '已签发', WAITLIST: '候补', EXCLUDED: '不占额度', CANCELLED: '已取消'};
+  var REASONS = {PROMISED: '承诺兑现', PROMISED_PREEMPTED: '承诺兑现（额度已被更早订单挤占）', NOT_ISSUED: '待签发', QUOTA_INSUFFICIENT: '额度不足', COUPON_CAUSES_LOSS: '用券后亏损', CANCELLED: '已取消'};
+  function renderQuota(data) {
+    if (!data) { $('quota-usage').innerHTML = '<p class="empty">尚无活动</p>'; $('quota-orders').innerHTML = ''; return; }
+    state.campaign = data.id;
+    var usage = data.usage;
+    $('quota-hint').textContent = data.name + ' · 额度 ' + usage.quota_cents + ' 分';
+    $('quota-usage').innerHTML = [
+      ['活动额度', usage.quota_cents], ['已占额度', usage.reserved_cents], ['剩余额度', usage.available_cents],
+      ['已签发承诺', usage.committed_cents], ['被挤占承诺', usage.preempted_cents],
+      ['敞口合计', usage.exposure_cents], ['超发', usage.overcommitted_cents]
+    ].map(function (row) {
+      return '<div class="ledger-row"><span>' + row[0] + '</span><strong class="' +
+        (row[0] === '超发' && row[1] > 0 ? 'check-bad' : '') + '">' + row[1] + '</strong></div>';
+    }).join('');
+    $('quota-orders').innerHTML = data.orders.length ? data.orders.map(function (item) {
+      var actions = '';
+      if (item.can_issue) actions += '<button type="button" data-issue="' + esc(item.order_id) + '">签发</button> ';
+      if (item.state !== 'CANCELLED') actions += '<button type="button" data-cancel="' + esc(item.order_id) + '">取消</button>';
+      return '<tr><td>' + esc(item.order_id) + '</td><td>' + esc(item.received_at) + '</td><td class="num">' + item.coupon_cents +
+        '</td><td class="num">' + item.margin_with_coupon + '</td><td><span class="verdict" data-v="' +
+        (item.can_ship ? 'PASS' : item.status === 'WAITLIST' || item.status === 'EXCLUDED' ? 'REJECT' : 'REVIEW') + '">' +
+        esc(LABELS[item.status] || item.status) + '</span></td><td><small>' + esc(REASONS[item.reason] || item.reason) +
+        (item.waitlist_position ? '（第 ' + item.waitlist_position + ' 位）' : '') + '</small></td><td>' +
+        (item.can_ship ? '可发货' : '不可发货') + '</td><td>' + actions + '</td></tr>';
+    }).join('') : '<tr><td class="empty" colspan="8">尚无订单</td></tr>';
+    Array.from(document.querySelectorAll('[data-issue]')).forEach(function (button) {
+      button.addEventListener('click', function () { quotaAction(button.getAttribute('data-issue'), 'issue'); });
+    });
+    Array.from(document.querySelectorAll('[data-cancel]')).forEach(function (button) {
+      button.addEventListener('click', function () { quotaAction(button.getAttribute('data-cancel'), 'cancel'); });
+    });
+  }
+  async function quotaAction(orderId, action) {
+    if (!state.campaign) return;
+    try {
+      var result = await request('/api/campaigns/' + state.campaign + '/orders/' + encodeURIComponent(orderId) + '/' + action, {method: 'POST'});
+      renderQuota(result.campaign);
+    } catch (error) { setNotice(error.message); }
+  }
+  async function createCampaign() {
+    try {
+      var result = await request('/api/campaigns', {method: 'POST', body: JSON.stringify({
+        name: $('quota-name').value, quota_cents: Number($('quota-amount').value || 0)
+      })});
+      await refreshCampaigns();
+      renderQuota(result);
+    } catch (error) { setNotice(error.message); }
+  }
+  async function submitOrder() {
+    if (!state.campaign) { setNotice('请先创建或选择活动'); return; }
+    try {
+      var result = await request('/api/campaigns/' + state.campaign + '/orders', {method: 'POST', body: JSON.stringify({
+        order_id: $('q-id').value, received_at: $('q-time').value, line_qty: Number($('q-qty').value || 0),
+        sell_price_cents: Number($('q-sell').value || 0), unit_cost_cents: Number($('q-cost').value || 0),
+        supplier_fund_cents: Number($('q-fund').value || 0), coupon_cents: Number($('q-coupon').value || 0)
+      })});
+      renderQuota(result.campaign);
+    } catch (error) { setNotice(error.message); }
+  }
+  async function refreshCampaigns() {
+    var data = await request('/api/campaigns');
+    $('quota-campaign').innerHTML = '<option value="">新建活动</option>' + data.campaigns.map(function (item) {
+      return '<option value="' + esc(item.id) + '">' + esc(item.name) + ' · ' + item.usage.available_cents + '/' + item.quota_cents + '</option>';
+    }).join('');
+    if (state.campaign) $('quota-campaign').value = state.campaign;
+  }
+  async function loadCampaign(campaignId) {
+    if (!campaignId) return;
+    try { renderQuota(await request('/api/campaigns/' + campaignId)); }
+    catch (error) { setNotice(error.message); }
+  }
   async function boot() {
     try {
       var catalog = await request('/api/catalog');
@@ -130,6 +202,10 @@
       await loadStage('intake');
     } catch (error) { setNotice(error.message); }
     $('run').addEventListener('click', runBatch);
+    $('quota-create').addEventListener('click', createCampaign);
+    $('q-submit').addEventListener('click', submitOrder);
+    $('quota-campaign').addEventListener('change', function () { loadCampaign($('quota-campaign').value); });
+    try { await refreshCampaigns(); } catch (error) { setNotice(error.message); }
     $('sign').addEventListener('click', function () { review('APPROVED'); });
     $('hold').addEventListener('click', function () { review('HELD'); });
     $('profile').addEventListener('change', function () {

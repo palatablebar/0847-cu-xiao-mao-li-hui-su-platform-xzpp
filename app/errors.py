@@ -18,6 +18,21 @@ MESSAGES = {
     "GATE_BLOCKED": "存在阻断项，不能签发",
     "NOT_APPROVED": "批次尚未签发",
     "BAD_REQUEST": "请求内容不完整",
+    "CAMPAIGN_NOT_FOUND": "活动不存在",
+    "ORDER_NOT_FOUND": "订单不存在",
+    "ORDER_CONFLICT": "订单一经提交不可改写，请换新订单号",
+    "ORDER_LOSS": "用券后亏损的订单不能签发",
+    "ORDER_CANCELLED": "订单已取消，不能签发",
+    "QUOTA_UNAVAILABLE": "额度不足，订单仍在候补",
+    "BAD_RECEIVED_AT": "接单时间无法解析",
+    "INVALID_QUOTA_CENTS": "活动额度必须为非负整数",
+    "INVALID_LINE_QTY": "数量必须为正整数",
+    "INVALID_SELL_PRICE_CENTS": "售价必须为非负整数",
+    "INVALID_UNIT_COST_CENTS": "单件成本必须为非负整数",
+    "INVALID_SUPPLIER_FUND_CENTS": "供应商出资必须为非负整数",
+    "INVALID_COUPON_CENTS": "券金额必须为非负整数",
+    "FUND_OVER_COST": "供应商出资超过成本",
+    "COUPON_OVER_REVENUE": "券金额超过行收入",
 }
 
 
