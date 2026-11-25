@@ -1,0 +1,10 @@
+﻿sku,line_qty,list_price_cents,sell_price_cents,supplier_fund_cents,coupon_cents,unit_cost_cents
+A,10,1000,900,7000,500,600
+D,2,1000,800,0,2000,500
+E,2,1000,900,-1,0,500
+F,1,1000,900,0,0,800
+C,3,500,500,100,0,400
+C,4,500,500,100,0,400
+G,1,1000,900,0,0,1200
+
+A,10,1000,900,1000,500,600,surplus
